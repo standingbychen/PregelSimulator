@@ -4,22 +4,25 @@ import pregel.IUtils;
 import pregel.Master;
 import pregel.Triplet;
 import pregel.Vertex;
+import pregel.Worker;
 
 public class VertexTest extends Vertex<Integer, Integer, Integer> {
 
-	public VertexTest(String vertexId) {
-		super(vertexId);
-	}
+    /**
+     * @param vertexId
+     */
+    public VertexTest(String vertexId) {
+        super(vertexId);
+        // TODO Auto-generated constructor stub
+    }
 
-	@Override
+
+    @Override
 	public void compute() {
 //		System.out.println(this.vertexId);
 		voteToHalt();
 	}
 
-	@Override
-	public void getMessage() {
-	}
 
 	@Override
 	public String toString() {
