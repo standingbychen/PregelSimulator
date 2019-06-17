@@ -14,7 +14,8 @@ public class Master<V, E, M> {
     public final int workersNum;
     protected final List<Worker<V, E, M>> workers;
     private final Map<String, Vertex<V, E, M>> vertices = new HashMap<>();
-    protected Combiner combiner;
+
+    protected Combiner<M> combiner;
 
     protected CountDownLatch countDownLatch;
 
@@ -143,7 +144,7 @@ public class Master<V, E, M> {
 
     }
 
-    public void setCombiner(Combiner<E> combiner) {
+    public void setCombiner(Combiner<M> combiner) {
         this.combiner = combiner;
     }
 
