@@ -1,10 +1,10 @@
 package test;
 
+import java.util.List;
 import pregel.IUtils;
 import pregel.Master;
 import pregel.Triplet;
 import pregel.Vertex;
-import pregel.Worker;
 
 public class VertexTest extends Vertex<Integer, Integer, Integer> {
 
@@ -18,32 +18,36 @@ public class VertexTest extends Vertex<Integer, Integer, Integer> {
 
 
     @Override
-	public void compute() {
-//		System.out.println(this.vertexId);
-		voteToHalt();
-	}
+    public void compute(List<Integer> msgs) {
+        if (!msgs.isEmpty()) {
+            voteToHalt();
+        }
+        for (String vertex : targets.keySet()) {
+            sendMessageTo(vertex, 0);
+        }
+        if (getSuperStep() >= 15 && isActive()) {
+            System.out.println(this.vertexId);
+            voteToHalt();
+        }
+    }
 
 
-	@Override
-	public String toString() {
-		return vertexId;
-	}
-
-	public static void main(String[] args) {
-		Master<Integer, Integer, Integer> master = new Master<>(10);
-		UtilTest utilImpl = new UtilTest();
-		master.importGraph("web-Google.txt", utilImpl);
-		master.launch();
-	}
+    public static void main(String[] args) {
+        Master<Integer, Integer, Integer> master = new Master<>(10);
+        UtilTest utilImpl = new UtilTest();
+        master.importGraph("web-Google.txt", utilImpl);
+        master.save("src/partition");
+    }
 
 }
 
+
 class UtilTest implements IUtils<Integer, Integer, Integer> {
-	@Override
-	public Triplet<Integer, Integer, Integer> parseGraphFileLine(String line) {
-		String[] strings = line.split("\\t");
-		VertexTest source = new VertexTest(strings[0]);
-		VertexTest target = new VertexTest(strings[1]);
-		return new Triplet<Integer, Integer, Integer>(source, target, 0);
-	}
+    @Override
+    public Triplet<Integer, Integer, Integer> parseGraphFileLine(String line) {
+        String[] strings = line.split("\\t");
+        VertexTest source = new VertexTest(strings[0]);
+        VertexTest target = new VertexTest(strings[1]);
+        return new Triplet<Integer, Integer, Integer>(source, target, 0);
+    }
 }

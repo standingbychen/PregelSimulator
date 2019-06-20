@@ -1,11 +1,11 @@
 package pregel;
 
+import java.io.BufferedWriter;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 
@@ -18,7 +18,8 @@ import java.util.Set;
 public abstract class Vertex<V, E, M> {
     private Worker<V, E, M> worker;
     public final String vertexId;
-    private V vertexValue;
+    protected V vertexValue;
+    private int superStep = 0;
 
     /**
      * 标记顶点活跃状态
@@ -29,10 +30,10 @@ public abstract class Vertex<V, E, M> {
      */
     private boolean active = true;
 
-    private Map<Vertex<V, E, M>, E> targets = new HashMap<>();
+    protected Map<String, E> targets = new HashMap<>();
 
-    private List<M> lastMessage = new LinkedList<>();
-    private List<M> curMessage = new LinkedList<>();
+    private List<M> lastMessage = Collections.synchronizedList(new LinkedList<>());
+    private List<M> curMessage = Collections.synchronizedList(new LinkedList<>());
 
     public Vertex(String vertexId) {
         super();
@@ -52,15 +53,14 @@ public abstract class Vertex<V, E, M> {
         this.vertexValue = vertexValue;
     }
 
-    abstract public void compute();
+    abstract public void compute(List<M> msgs);
 
 
-
-    public void sendMessageTo(Vertex<V, E, M> target, M msg) {
-        worker.addSentMessage(target.vertexId, msg);
+    protected void sendMessageTo(String target, M msg) {
+        worker.addSentMessage(target, msg);
     }
 
-    public void addTarget(Vertex<V, E, M> target, E edgeValue) {
+    protected void addTarget(String target, E edgeValue) {
         targets.put(target, edgeValue);
     }
 
@@ -68,17 +68,50 @@ public abstract class Vertex<V, E, M> {
         active = false;
     }
 
-    public synchronized void getMessage(M msg) {
+    /**
+     * cur 消息队列调整为 last消息队列<p>
+     * 重设 cur 消息队列
+     */
+    protected List<M> resetMessages() {
+        lastMessage.clear();
+        if (curMessage.isEmpty()) {
+            return lastMessage;
+        }
+        // 接收消息，置为active
+        active = true;
+        lastMessage.addAll(curMessage);
+        curMessage.clear();
+        return lastMessage;
+    }
 
+    /**
+     * 由Woker调用，向消息队列种添加消息
+     * @param msg 新增消息
+     */
+    protected synchronized void addNewMessage(M msg) {
+        curMessage.add(msg);
+    }
+
+    protected synchronized void addNewMessages(List<M> msgs) {
+        curMessage.addAll(msgs);
     }
 
 
-    public V getValue() {
-        return vertexValue;
-    }
 
     public boolean isActive() {
         return active;
+    }
+
+    public int getSuperStep() {
+        return superStep;
+    }
+
+    public int getVerticesNum() {
+        return worker.getVerticesNum();
+    }
+
+    protected void incSuperStep() {
+        superStep++;
     }
 
     public void setWorker(Worker<V, E, M> worker) {
@@ -89,7 +122,52 @@ public abstract class Vertex<V, E, M> {
         return worker.id;
     }
 
-    public String outputFormater() {
+    public String resultFormater() {
         return toString();
     }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        String result = "";
+        for (String target : targets.keySet()) {
+            result += vertexId + "\t" + target + "\n";
+        }
+        if (targets.isEmpty()) {
+            result = vertexId + "\n";
+        }
+
+        return result;
+    }
+
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((vertexId == null) ? 0 : vertexId.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Vertex other = (Vertex) obj;
+        if (vertexId == null) {
+            if (other.vertexId != null)
+                return false;
+        } else if (!vertexId.equals(other.vertexId))
+            return false;
+        return true;
+    }
+
 }
