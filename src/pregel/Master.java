@@ -8,9 +8,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,12 +27,14 @@ public class Master<V, E, M> {
     public final int workersNum;
     protected int verticesNum;
     int stepCounter = 0;
+    private DecimalFormat dFormat = new DecimalFormat("0.00");
 
     // 并发相关
     protected CountDownLatch countDownLatch;
     private ExecutorService executor;
 
     protected Combiner<M> combiner;
+    protected Aggregator<M> aggregator;
 
 
     /**
@@ -54,17 +58,33 @@ public class Master<V, E, M> {
     public void launch() {
         double startTime = 0;
         double endTime = 0;
+        List<String> workTime = new LinkedList<>();
+        List<Integer> traffics = new LinkedList<>();
         System.out.printf("Mission launch with %d workers on %d vertices.\n", workersNum,
                 vertexIn.size());
 
         while (!allInactive()) {
+            System.out.println();
             System.out.printf("Step %d start.\n", stepCounter);
+            
             startTime = System.currentTimeMillis();
             run();
             endTime = System.currentTimeMillis();
+
+            // 统计
+            for (Worker<V, E, M> worker : workers) {
+                workTime.add(dFormat.format(worker.timespan));
+                traffics.add(worker.traffic);
+            }
+
+            System.out.println("Time cost /s: " + workTime);
+            System.out.println("Traffic cost: " + traffics);
             System.out.printf("Step %d end with %.2f seconds.\n", stepCounter,
                     (endTime - startTime) / 1000);
+
             stepCounter++;
+            workTime.clear();
+            traffics.clear();
         }
         executor.shutdown();
     }
@@ -156,6 +176,10 @@ public class Master<V, E, M> {
 
         this.vertexIn.putAll(partition());
         verticesNum = vertexIn.size();
+
+        for (Worker<V, E, M> worker : workers) {
+            worker.reportVertexAndEdge();
+        }
     }
 
     /**
@@ -181,8 +205,21 @@ public class Master<V, E, M> {
         return workers.get(vertexIn.get(vertexId));
     }
 
+    /**
+     * 使用Combiner并指定combine实现
+     * @param combiner
+     */
     public void setCombiner(Combiner<M> combiner) {
         this.combiner = combiner;
+    }
+
+
+    /**
+     * 使用 Aggregator 并指定 report 和 aggregate 的实现
+     * @param aggregator the aggregator to set
+     */
+    public void setAggregator(Aggregator<M> aggregator) {
+        this.aggregator = aggregator;
     }
 
 
@@ -218,6 +255,8 @@ public class Master<V, E, M> {
             for (String string : newVertices) {
                 vertexIn.put(string, i);
             }
+            // report
+            workers.get(i).reportVertexAndEdge();
         }
         verticesNum = vertexIn.size();
         System.out.println("Load partition complete." + verticesNum);

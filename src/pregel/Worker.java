@@ -34,6 +34,8 @@ public class Worker<V, E, M> implements Runnable {
     /** 待发送消息队列，存储当前消息 */
     private Map<String, List<M>> messagesTobeSent = new HashMap<>();
 
+    protected double timespan;
+    protected int traffic = 0;
 
     protected Worker(int id, Master<V, E, M> master) {
         this.id = id;
@@ -45,6 +47,8 @@ public class Worker<V, E, M> implements Runnable {
      */
     @Override
     public void run() {
+        double start = System.currentTimeMillis();
+        traffic = 0;
         for (Vertex<V, E, M> vertex : vertices.values()) {
             List<M> msgs = vertex.resetMessages();
             if (vertex.isActive()) {
@@ -55,6 +59,7 @@ public class Worker<V, E, M> implements Runnable {
         sendMessages();
         // 计数减一，表示完成任务
         master.countDownLatch.countDown();
+        timespan = (System.currentTimeMillis() - start)/1000;
     }
 
 
@@ -77,6 +82,7 @@ public class Worker<V, E, M> implements Runnable {
      * @param msg
      */
     protected void addSentMessage(String targetId, M msg) {
+        traffic++;
         if (messagesTobeSent.containsKey(targetId)) {
             messagesTobeSent.get(targetId).add(msg);
         } else {
@@ -143,6 +149,15 @@ public class Worker<V, E, M> implements Runnable {
         return master.verticesNum;
     }
 
+    protected void reportVertexAndEdge() {
+        int edgeSum = 0;
+        for (Vertex<V, E, M> vertex : vertices.values()) {
+            edgeSum += vertex.targets.size();
+        }
+        System.out.printf("Worker %d load %d vertices concerning %d edges ... \n", id,
+                vertices.size(), edgeSum);
+    }
+
 
     protected Set<String> loadPartition(File file, IUtils<V, E, M> utils) {
         Set<String> result = new HashSet<>();
@@ -171,7 +186,6 @@ public class Worker<V, E, M> implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.printf("Worker %d load %d vertices... \n", id, result.size());
         return result;
     }
 
