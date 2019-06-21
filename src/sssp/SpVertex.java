@@ -3,13 +3,8 @@
  */
 package sssp;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import pagerank.PrCombiner;
-import pagerank.PrUtils;
-import pregel.IUtils;
 import pregel.Master;
 import pregel.Vertex;
 
@@ -44,7 +39,6 @@ public class SpVertex extends Vertex<Integer, Integer, SpMessage> {
                 min = spMessage.cost;
                 result = spMessage;
             }
-            // min = Integer.min(spMessage, min);
         }
         if (min < vertexValue) {
             vertexValue = min;
@@ -53,7 +47,6 @@ public class SpVertex extends Vertex<Integer, Integer, SpMessage> {
             }
             for (Map.Entry<String, Integer> entry : targets.entrySet()) {
                 sendMessageTo(entry.getKey(), new SpMessage(this.path, min + entry.getValue()));
-                // sendMessageTo(entry.getKey(), entry.getValue());
             }
         }
         voteToHalt();

@@ -2,7 +2,6 @@ package pregel;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -170,7 +169,6 @@ public class Worker<V, E, M> implements Runnable {
         try {
             this.combiner = (Combiner<M>) combiner.getClass().newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -183,7 +181,6 @@ public class Worker<V, E, M> implements Runnable {
         try {
             this.aggregator = (Aggregator<Vertex<V, E, M>, M>) aggregator.getClass().newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
