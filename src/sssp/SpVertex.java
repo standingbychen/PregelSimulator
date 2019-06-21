@@ -17,7 +17,7 @@ import pregel.Vertex;
  * @author standingby
  *
  */
-public class SpVertex extends Vertex<Integer, Integer, Integer> {
+public class SpVertex extends Vertex<Integer, Integer, SpMessage> {
     private static String source = "0";
     private String path;
 
@@ -36,24 +36,24 @@ public class SpVertex extends Vertex<Integer, Integer, Integer> {
      * @see pregel.Vertex#compute(java.util.List)
      */
     @Override
-    public void compute(List<Integer> msgs) {
+    public void compute(List<SpMessage> msgs) {
         int min = source.equals(vertexId) ? 0 : Integer.MAX_VALUE;
-        // SpMessage result = null;
-        for (Integer spMessage : msgs) {
-            // if (min < spMessage.cost) {
-            // min = spMessage.cost;
-            //// result = spMessage;
-            // }
-            min = Integer.min(spMessage, min);
+        SpMessage result = null;
+        for (SpMessage spMessage : msgs) {
+            if (min > spMessage.cost) {
+                min = spMessage.cost;
+                result = spMessage;
+            }
+            // min = Integer.min(spMessage, min);
         }
         if (min < vertexValue) {
             vertexValue = min;
-            // if (result != null) {
-            // this.path = result.path + " > " + this.vertexId;
-            // }
+            if (result != null) {
+                this.path = result.path + " > " + this.vertexId;
+            }
             for (Map.Entry<String, Integer> entry : targets.entrySet()) {
-//                sendMessageTo(entry.getKey(), new Integer(this.path, min + entry.getValue()));
-                sendMessageTo(entry.getKey(), entry.getValue());
+                sendMessageTo(entry.getKey(), new SpMessage(this.path, min + entry.getValue()));
+                // sendMessageTo(entry.getKey(), entry.getValue());
             }
         }
         voteToHalt();
@@ -74,16 +74,16 @@ public class SpVertex extends Vertex<Integer, Integer, Integer> {
 
 
     public static void main(String[] args) {
-        Master<Integer, Integer, Integer> master = new Master<>(10);
+        Master<Integer, Integer, SpMessage> master = new Master<>(10);
         // master.importGraph("web-Google.txt", utilImpl);
         SpUtils utilImpl = new SpUtils();
-        // master.setCombiner(new SpCombiner());
+        master.setCombiner(new SpCombiner());
         master.load("src/partition", utilImpl);
         while (!master.allInactive()) {
             master.run();
         }
-        System.out.println("Mission Complete.");
-        // master.resultOutput("src/sssp/result.txt");
+        System.out.println("\nMission Complete.");
+        master.resultOutput("src/sssp/result.txt");
         master.shutdown();
     }
 }

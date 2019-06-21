@@ -22,7 +22,7 @@ public class SpCombiner implements Combiner<SpMessage> {
         int min = msgList.get(0).cost;
         SpMessage result = msgList.get(0);
         for (SpMessage spMessage : msgList) {
-            if (min < spMessage.cost) {
+            if (min > spMessage.cost) {
                 min = spMessage.cost;
                 result = spMessage;
             }

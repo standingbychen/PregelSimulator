@@ -10,7 +10,7 @@ import pregel.Triplet;
  * @author standingby
  *
  */
-public class SpUtils implements IUtils<Integer, Integer, Integer> {
+public class SpUtils implements IUtils<Integer, Integer, SpMessage> {
 
     /*
      * (non-Javadoc)
@@ -18,7 +18,7 @@ public class SpUtils implements IUtils<Integer, Integer, Integer> {
      * @see pregel.IUtils#parseGraphFileLine(java.lang.String)
      */
     @Override
-    public Triplet<Integer, Integer, Integer> parseGraphFileLine(String line) {
+    public Triplet<Integer, Integer, SpMessage> parseGraphFileLine(String line) {
         String[] strings = line.split("\\t");
         SpVertex source = new SpVertex(strings[0]);
         SpVertex target;
@@ -28,7 +28,7 @@ public class SpUtils implements IUtils<Integer, Integer, Integer> {
             // Ã»ÓÐ³ö±ß
             target = null;
         }
-        return new Triplet<Integer, Integer, Integer>(source, target, 1);
+        return new Triplet<Integer, Integer, SpMessage>(source, target, 1);
     }
 
 
