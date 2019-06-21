@@ -34,8 +34,16 @@ public class Master<V, E, M> {
     private ExecutorService executor;
 
     protected Combiner<M> combiner;
-    protected Aggregator<M> aggregator;
 
+    private Aggregator<Vertex<V, E, M>, M> aggregator;
+    private List<M> aggValues;
+    private M aggValue;
+
+    // 统计信息
+    private double startTime = 0;
+    private double endTime = 0;
+    private List<String> workTime = new LinkedList<>();
+    private List<Integer> traffics = new LinkedList<>();
 
     /**
      * Master
@@ -55,63 +63,13 @@ public class Master<V, E, M> {
      * <p>
      * 默认所有节点inactive时，停止
      */
-    public void launch() {
-        double startTime = 0;
-        double endTime = 0;
-        List<String> workTime = new LinkedList<>();
-        List<Integer> traffics = new LinkedList<>();
-        System.out.printf("Mission launch with %d workers on %d vertices.\n", workersNum,
-                vertexIn.size());
+    public void run() {
 
-        while (!allInactive()) {
-            System.out.println();
-            System.out.printf("Step %d start.\n", stepCounter);
-            
-            startTime = System.currentTimeMillis();
-            run();
-            endTime = System.currentTimeMillis();
+        System.out.println();
+        System.out.printf("Step %d start.\n", stepCounter);
 
-            // 统计
-            for (Worker<V, E, M> worker : workers) {
-                workTime.add(dFormat.format(worker.timespan));
-                traffics.add(worker.traffic);
-            }
-
-            System.out.println("Time cost /s: " + workTime);
-            System.out.println("Traffic cost: " + traffics);
-            System.out.printf("Step %d end with %.2f seconds.\n", stepCounter,
-                    (endTime - startTime) / 1000);
-
-            stepCounter++;
-            workTime.clear();
-            traffics.clear();
-        }
-        executor.shutdown();
-    }
-
-
-    /**
-     * 启动运算，执行一定迭代次数
-     * @param maxItor 迭代次数上限
-     */
-    public void launch(int maxItor) {
-        System.out.printf("Mission launch with %d workers on %d vertices.\n", workersNum,
-                verticesNum);
-
-        while (stepCounter < maxItor) {
-            System.out.printf("Step %d start.\n", stepCounter);
-            run();
-            System.out.printf("Step %d end.\n", stepCounter);
-            stepCounter++;
-        }
-        executor.shutdown();
-    }
-
-    /**
-     * 执行运算一轮 SuperStep，启动workers并行计算
-     */
-    private void run() {
         countDownLatch = new CountDownLatch(workersNum);
+        startTime = System.currentTimeMillis();
         for (Worker<V, E, M> worker : workers) {
             // 并行运算
             executor.execute(worker);
@@ -121,9 +79,38 @@ public class Master<V, E, M> {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        endTime = System.currentTimeMillis();
+
+        // 统计
+        for (Worker<V, E, M> worker : workers) {
+            workTime.add(dFormat.format(worker.timespan));
+            traffics.add(worker.traffic);
+            if (aggregator != null) {
+                aggValues.add(worker.aggValue);
+            }
+        }
+        // 聚集计算（可选）
+        if (aggregator != null) {
+            aggValue = aggregator.aggregate(aggValues);
+            aggValues.clear();
+        }
+
+        System.out.println("Time cost /s: " + workTime);
+        System.out.println("Traffic cost: " + traffics);
+        System.out.printf("Step %d end with %.2f seconds.\n", stepCounter,
+                (endTime - startTime) / 1000);
+
+        stepCounter++;
+        workTime.clear();
+        traffics.clear();
     }
 
-    private boolean allInactive() {
+    public void shutdown() {
+        executor.shutdown();
+    }
+
+
+    public boolean allInactive() {
         for (Worker<V, E, M> worker : workers) {
             if (!worker.allInactive()) {
                 return false;
@@ -205,12 +192,37 @@ public class Master<V, E, M> {
         return workers.get(vertexIn.get(vertexId));
     }
 
+
+    /**
+     * @return the aggValue
+     */
+    public M getAggValue() {
+        return aggValue;
+    }
+
+    /**
+     * @return the verticesNum
+     */
+    public int getVerticesNum() {
+        return verticesNum;
+    }
+
+    /**
+     * @return the stepCounter
+     */
+    public int getStepCounter() {
+        return stepCounter;
+    }
+
     /**
      * 使用Combiner并指定combine实现
      * @param combiner
      */
     public void setCombiner(Combiner<M> combiner) {
         this.combiner = combiner;
+        for (Worker<V, E, M> worker : workers) {
+            worker.setCombiner(combiner);
+        }
     }
 
 
@@ -218,8 +230,12 @@ public class Master<V, E, M> {
      * 使用 Aggregator 并指定 report 和 aggregate 的实现
      * @param aggregator the aggregator to set
      */
-    public void setAggregator(Aggregator<M> aggregator) {
+    public void setAggregator(Aggregator<Vertex<V, E, M>, M> aggregator) {
         this.aggregator = aggregator;
+        for (Worker<V, E, M> worker : workers) {
+            worker.setAggregator(aggregator);
+        }
+        aggValues = new LinkedList<>();
     }
 
 
@@ -259,7 +275,7 @@ public class Master<V, E, M> {
             workers.get(i).reportVertexAndEdge();
         }
         verticesNum = vertexIn.size();
-        System.out.println("Load partition complete." + verticesNum);
+        System.out.println("Load partition complete.");
     }
 
 

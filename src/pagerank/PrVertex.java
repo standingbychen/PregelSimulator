@@ -16,6 +16,7 @@ import pregel.Vertex;
 public class PrVertex extends Vertex<Double, Void, Double> {
     /** 阻尼系数 */
     public static final double DAMPFACTOR = 0.85;
+    private double oldValue;
 
     /**
      * @param vertexId
@@ -32,6 +33,7 @@ public class PrVertex extends Vertex<Double, Void, Double> {
      */
     @Override
     public void compute(List<Double> msgs) {
+        oldValue = vertexValue;
         if (getSuperStep() >= 1) {
             double sum = 0;
             for (Double msg : msgs) {
@@ -45,13 +47,17 @@ public class PrVertex extends Vertex<Double, Void, Double> {
             for (String target : targets.keySet()) {
                 sendMessageTo(target, vertexValue / n);
             }
-
         } else {
             // 停止迭代
             voteToHalt();
-            System.out.println(resultFormater());
         }
+    }
 
+    /**
+     * @return the oldValue
+     */
+    public double getOldValue() {
+        return oldValue;
     }
 
     /*
@@ -66,12 +72,22 @@ public class PrVertex extends Vertex<Double, Void, Double> {
 
     public static void main(String[] args) {
         Master<Double, Void, Double> master = new Master<>(10);
-        PrUtils utilImpl = new PrUtils();
         // master.importGraph("web-Google.txt", utilImpl);
         master.setCombiner(new PrCombiner());
-        master.load("src/partition", utilImpl);
-        master.launch();
+        master.setAggregator(new PrAgg());
+        master.load("src/partition", new PrUtils());
+        while (master.getStepCounter() <= 30) {
+            master.run();
+            System.out.println("Delta : " +master.getAggValue() / master.getVerticesNum());
+            // 终止条件
+            if (master.getStepCounter() >= 3
+                    && master.getAggValue() / master.getVerticesNum() < 500) {
+                break;
+            }
+        }
+        System.out.println("Misson Complete.");
         master.resultOutput("src/pagerank/result.txt");
+        master.shutdown();
     }
 }
 

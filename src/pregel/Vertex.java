@@ -90,10 +90,12 @@ public abstract class Vertex<V, E, M> {
      */
     protected synchronized void addNewMessage(M msg) {
         curMessage.add(msg);
+        active = true;
     }
 
     protected synchronized void addNewMessages(List<M> msgs) {
         curMessage.addAll(msgs);
+        active = true;
     }
 
 
@@ -104,6 +106,10 @@ public abstract class Vertex<V, E, M> {
 
     public int getSuperStep() {
         return superStep;
+    }
+
+    public V getVertexValue() {
+        return vertexValue;
     }
 
     public int getVerticesNum() {

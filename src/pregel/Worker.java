@@ -34,6 +34,10 @@ public class Worker<V, E, M> implements Runnable {
     /** 待发送消息队列，存储当前消息 */
     private Map<String, List<M>> messagesTobeSent = new HashMap<>();
 
+    protected Combiner<M> combiner;
+    protected Aggregator<Vertex<V, E, M>, M> aggregator;
+    protected M aggValue;
+
     protected double timespan;
     protected int traffic = 0;
 
@@ -49,6 +53,8 @@ public class Worker<V, E, M> implements Runnable {
     public void run() {
         double start = System.currentTimeMillis();
         traffic = 0;
+
+        // Compute
         for (Vertex<V, E, M> vertex : vertices.values()) {
             List<M> msgs = vertex.resetMessages();
             if (vertex.isActive()) {
@@ -56,10 +62,22 @@ public class Worker<V, E, M> implements Runnable {
                 vertex.incSuperStep();
             }
         }
+
+        // Aggregate （可选）
+        if (aggregator != null) {
+            List<M> values = new LinkedList<>();
+            for (Vertex<V, E, M> vertex : vertices.values()) {
+                values.add(aggregator.report(vertex));
+            }
+            aggValue = aggregator.aggregate(values);
+        }
+
         sendMessages();
         // 计数减一，表示完成任务
         master.countDownLatch.countDown();
-        timespan = (System.currentTimeMillis() - start)/1000;
+        timespan = (System.currentTimeMillis() - start) / 1000;
+
+
     }
 
 
@@ -96,14 +114,9 @@ public class Worker<V, E, M> implements Runnable {
     }
 
     private void sendMessages() {
-        if (master.combiner != null) {
+        if (combiner != null) {
             // 指定 Combiner
-            try {
-                Combiner<M> combiner = (Combiner<M>) master.combiner.getClass().newInstance();
-                sendMessages(combiner);
-            } catch (InstantiationException | IllegalAccessException e) {
-                e.printStackTrace();
-            }
+            sendMessagesWithCombiner();
         } else {
             // 默认发送模式
             for (Map.Entry<String, List<M>> entry : messagesTobeSent.entrySet()) {
@@ -118,7 +131,7 @@ public class Worker<V, E, M> implements Runnable {
      * 若指定Combiner，则利用combine函数处理消息队列
      * @param combiner
      */
-    private void sendMessages(Combiner<M> combiner) {
+    private void sendMessagesWithCombiner() {
         for (Map.Entry<String, List<M>> entry : messagesTobeSent.entrySet()) {
             vertexIn.get(entry.getKey()).addNewMessage(entry.getKey(),
                     combiner.combine(entry.getValue()));
@@ -149,6 +162,36 @@ public class Worker<V, E, M> implements Runnable {
         return master.verticesNum;
     }
 
+    /**
+     * 使用Combiner并指定combine实现
+     * @param combiner
+     */
+    public void setCombiner(Combiner<M> combiner) {
+        try {
+            this.combiner = (Combiner<M>) combiner.getClass().newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 使用 Aggregator 并指定 report 和 aggregate 的实现
+     * @param aggregator the aggregator to set
+     */
+    public void setAggregator(Aggregator<Vertex<V, E, M>, M> aggregator) {
+        try {
+            this.aggregator = (Aggregator<Vertex<V, E, M>, M>) aggregator.getClass().newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     * 统计并打印顶点数和边数
+     */
     protected void reportVertexAndEdge() {
         int edgeSum = 0;
         for (Vertex<V, E, M> vertex : vertices.values()) {
@@ -157,7 +200,6 @@ public class Worker<V, E, M> implements Runnable {
         System.out.printf("Worker %d load %d vertices concerning %d edges ... \n", id,
                 vertices.size(), edgeSum);
     }
-
 
     protected Set<String> loadPartition(File file, IUtils<V, E, M> utils) {
         Set<String> result = new HashSet<>();
