@@ -71,7 +71,7 @@ public class Worker<V, E, M> implements Runnable {
             aggValue = aggregator.aggregate(values);
         }
 
-        sendMessages();
+//        sendMessages();
         // 计数减一，表示完成任务
         master.countDownLatch.countDown();
         timespan = (System.currentTimeMillis() - start) / 1000;
@@ -112,7 +112,7 @@ public class Worker<V, E, M> implements Runnable {
         }
     }
 
-    private void sendMessages() {
+    protected void sendMessages() {
         if (combiner != null) {
             // 指定 Combiner
             sendMessagesWithCombiner();
@@ -142,11 +142,11 @@ public class Worker<V, E, M> implements Runnable {
      * @param vertexId 消息接收target
      * @param msgs 传递消息
      */
-    private void addNewMessages(String vertexId, List<M> msgs) {
+    private synchronized void addNewMessages(String vertexId, List<M> msgs) {
         vertices.get(vertexId).addNewMessages(msgs);
     }
 
-    private void addNewMessage(String vertexId, M msg) {
+    private synchronized void addNewMessage(String vertexId, M msg) {
         vertices.get(vertexId).addNewMessage(msg);
     }
 

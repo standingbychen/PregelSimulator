@@ -18,7 +18,7 @@ public class SpCombiner implements Combiner<SpMessage> {
      * @see pregel.Combiner#combine(java.util.List)
      */
     @Override
-    public SpMessage combine(List<SpMessage> msgList) {
+    public synchronized SpMessage combine(List<SpMessage> msgList) {
         int min = msgList.get(0).cost;
         SpMessage result = msgList.get(0);
         for (SpMessage spMessage : msgList) {

@@ -81,6 +81,11 @@ public class Master<V, E, M> {
         }
         endTime = System.currentTimeMillis();
 
+        // 发送消息
+        for (Worker<V, E, M> worker : workers) {
+            worker.sendMessages();
+        }
+
         // 统计
         for (Worker<V, E, M> worker : workers) {
             workTime.add(dFormat.format(worker.timespan));
