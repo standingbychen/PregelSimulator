@@ -70,7 +70,7 @@ public class SpVertex extends Vertex<Integer, Integer, SpMessage> {
         Master<Integer, Integer, SpMessage> master = new Master<>(10);
         // master.importGraph("web-Google.txt", utilImpl);
         SpUtils utilImpl = new SpUtils();
-        master.setCombiner(new SpCombiner());
+        master.setCombiner(SpCombiner.class);
         master.load("src/partition", utilImpl);
         while (!master.allInactive()) {
             master.run();

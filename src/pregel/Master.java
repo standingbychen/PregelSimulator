@@ -33,7 +33,7 @@ public class Master<V, E, M> {
     protected CountDownLatch countDownLatch;
     private ExecutorService executor;
 
-    protected Combiner<M> combiner;
+    protected Class<? extends Combiner<M>> combiner;
 
     private Aggregator<Vertex<V, E, M>, M> aggregator;
     private List<M> aggValues;
@@ -223,7 +223,8 @@ public class Master<V, E, M> {
      * 使用Combiner并指定combine实现
      * @param combiner
      */
-    public void setCombiner(Combiner<M> combiner) {
+    public void setCombiner(Class<? extends Combiner<M>> combiner) {
+//        public void setCombiner(Combiner<M> combiner) {
         this.combiner = combiner;
         for (Worker<V, E, M> worker : workers) {
             worker.setCombiner(combiner);

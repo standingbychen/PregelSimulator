@@ -165,9 +165,9 @@ public class Worker<V, E, M> implements Runnable {
      * 使用Combiner并指定combine实现
      * @param combiner
      */
-    public void setCombiner(Combiner<M> combiner) {
+    public void setCombiner(Class<? extends Combiner<M>> combiner) {
         try {
-            this.combiner = (Combiner<M>) combiner.getClass().newInstance();
+            this.combiner = (Combiner<M>) combiner.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
