@@ -4,7 +4,6 @@
 package pregel;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author standingby
