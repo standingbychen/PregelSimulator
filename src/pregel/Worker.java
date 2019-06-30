@@ -71,7 +71,6 @@ public class Worker<V, E, M> implements Runnable {
             aggValue = aggregator.aggregate(values);
         }
 
-//        sendMessages();
         // 计数减一，表示完成任务
         master.countDownLatch.countDown();
         timespan = (System.currentTimeMillis() - start) / 1000;
@@ -165,7 +164,7 @@ public class Worker<V, E, M> implements Runnable {
      * 使用Combiner并指定combine实现
      * @param combiner
      */
-    public void setCombiner(Class<? extends Combiner<M>> combiner) {
+    protected void setCombiner(Class<? extends Combiner<M>> combiner) {
         try {
             this.combiner = (Combiner<M>) combiner.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
